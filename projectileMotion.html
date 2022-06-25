@@ -1,0 +1,309 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Projectile Motion</title>
+
+    <style>
+      * {
+        -webkit-user-select: none; /* Safari */
+        -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* IE10+/Edge */
+        user-select: none; /* Standard */
+      }
+
+      canvas {
+        display: block;
+        margin: 0 auto 20;
+        border: 1px solid red;
+      }
+
+      p {
+        margin: 0;
+        margin-top: 8px;
+      }
+
+      #infoarea {
+        display: flex;
+        justify-content: flex-start;
+        margin: 0 auto;
+        width: 700px;
+      }
+
+      #container {
+        display: flex;
+        justify-content: space-around;
+      }
+
+      .subcontainer {
+        margin: 4px;
+        padding: 4px;
+        box-shadow: 2px 2px 2px gray;
+      }
+    </style>
+  </head>
+
+  <body>
+    <canvas id="area"></canvas>
+
+    <div id="infoarea">
+      <!-- manual input-->
+      <div style="border: 1px solid black; padding: 3px">
+        <h2 style="text-align: center">Initail velocity and angle</h2>
+
+        <div id="container">
+          <!-- fields -->
+          <div class="subcontainer">
+            <div>
+              <p>Launch Angle (degrees)</p>
+              <input type="number" id="angle" />
+            </div>
+
+            <div>
+              <p>Launch Velocity (m/s)</p>
+              <input type="number" id="velocity" />
+            </div>
+
+            <div
+              style="display: flex; justify-content: center; margin-top: 3px"
+            >
+              <button id="launch">Launch!</button>
+              <button id="reset">Reset!</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- motion data -->
+      <div style="border: 1px solid black; padding: 3px">
+        <h2 style="text-align: center">PREDICTED MOTION DATA</h2>
+
+        <div id="container">
+          <!-- fields -->
+          <div class="subcontainer">
+            <div>
+              <p>Vertical Velocity (m/s)</p>
+              <p id="y-vel">0</p>
+            </div>
+
+            <div>
+              <p>Horizontal Velocity (m/s)</p>
+              <p id="x-vel">0</p>
+            </div>
+
+            <div>
+              <p>Flight Time (seconds)</p>
+              <p id="time">0</p>
+            </div>
+          </div>
+
+          <!-- fields 2 -->
+          <div class="subcontainer">
+            <div>
+              <p>Max Height achieved (m)</p>
+              <p id="max-height">0</p>
+            </div>
+
+            <div>
+              <p>X displacement (aprox.range)</p>
+              <p id="x-displacement">0</p>
+            </div>
+
+            <div>
+              <p>Y Acceleration (gravity)</p>
+              <p id="y-acceleration">9.81</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!---->
+
+    <script>
+      class Ball {
+        constructor(positon, velocity, acceleration, radius, context, color) {
+          this.radius = radius;
+          this.context = context;
+          this.color = color;
+          this.positon = {
+            x: positon.x,
+            y: positon.y,
+          };
+          this.velocity = {
+            x: velocity.x,
+            y: velocity.y,
+          };
+          this.acceleration = {
+            x: 0,
+            y: acceleration.y / 3,
+          };
+        }
+
+        draw() {
+          this.context.fillStyle = this.color;
+          this.context.beginPath();
+          this.context.arc(
+            this.positon.x,
+            this.positon.y,
+            this.radius,
+            0,
+            2 * Math.PI,
+            false
+          );
+          this.context.fill();
+        }
+
+        move() {
+          this.velocity.x = this.velocity.x;
+          this.velocity.y = this.velocity.y + this.acceleration.y;
+
+          this.positon.x += this.velocity.x;
+          this.positon.y += this.velocity.y;
+        }
+      }
+
+      const launcherBtn = document.getElementById("launch");
+      const resetBtn = document.getElementById("reset");
+      const velocity = document.getElementById("velocity");
+      const angle = document.getElementById("angle");
+
+      const yVel = document.getElementById("y-vel");
+      const xVel = document.getElementById("x-vel");
+      const timeEl = document.getElementById("time");
+      const maxHeightEl = document.getElementById("max-height");
+      const xDisplacementEl = document.getElementById("x-displacement");
+      const yAccelerationEl = document.getElementById("y-acceleration");
+
+      const canvas = document.getElementById("area");
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = window.innerWidth - 100;
+      canvas.height = 500;
+      console.log(window.innerWidth, canvas.width);
+
+      const radius = 10;
+
+      const ballOrigin = { x: 0 + radius, y: canvas.height - radius };
+
+      const drawNewBall = () => {
+        const ball = new Ball(
+          ballOrigin,
+          { x: 18.79, y: -6.84 },
+          { x: 0, y: -9.81 },
+          radius,
+          ctx,
+          "green"
+        );
+
+        ball.draw();
+      };
+
+      drawNewBall();
+
+      let testBall;
+      let launched = false;
+      launcherBtn.addEventListener("click", e => {
+        e.preventDefault();
+        launched = true;
+        testBall = calculations();
+      });
+
+      const FRAMES_PER_SECOND = 3;
+
+      const FRAME_MIN_TIME =
+        (1000 / 60) * (60 / FRAMES_PER_SECOND) - (1000 / 60) * 0.5;
+
+      let requestId;
+      let reset;
+      let lastFrameTime = 0;
+      function animate() {
+        if (time - lastFrameTime < FRAME_MIN_TIME) {
+          //skip the frame if the call is too early
+          requestAnimationFrame(animate);
+          return; // return as there is nothing to do
+        }
+        lastFrameTime = time; // remember the time of the rendered frame
+
+        if (launched) {
+          clearScreen();
+
+          testBall.draw();
+          // clearScreen();
+          testBall.move();
+        }
+
+        requestId = requestAnimationFrame(animate);
+      }
+
+      function clearScreen() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
+      const calculations = () => {
+        if (reset) {
+          requestId = requestAnimationFrame(animate);
+          reset = false;
+        }
+        const velocityVal = parseFloat(velocity.value);
+
+        const angleVal = parseFloat(angle.value) * -1;
+
+        const xVelocity = velocityVal * Math.cos((angleVal * Math.PI) / 180);
+
+        const yVelocity = velocityVal * Math.sin((angleVal * Math.PI) / 180);
+
+        const yAcceleration = 9.81;
+
+        const time = Math.abs(yVelocity / yAcceleration) * 2;
+
+        const displacementX = xVelocity * time;
+
+        const maxHeight = Math.abs(
+          (yVelocity * yVelocity) / (2 * yAcceleration)
+        );
+
+        yVel.textContent = yVelocity.toFixed(3);
+        xVel.textContent = xVelocity.toFixed(3);
+        timeEl.textContent = time.toFixed(3);
+        maxHeightEl.textContent = maxHeight.toFixed(3);
+        xDisplacementEl.textContent = displacementX.toFixed(3);
+        yAccelerationEl.textContent = yAcceleration;
+
+        const ball = new Ball(
+          ballOrigin,
+          { x: xVelocity, y: yVelocity },
+          { x: 0, y: yAcceleration },
+          radius,
+          ctx,
+          "green"
+        );
+
+        return ball;
+      };
+
+      requestAnimationFrame(animate);
+
+      resetBtn.addEventListener("click", e => {
+        e.preventDefault();
+        reset = true;
+        clearScreen();
+        cancelAnimationFrame(requestId);
+
+        yVel.textContent = 0;
+        xVel.textContent = 0;
+        timeEl.textContent = 0;
+        maxHeightEl.textContent = 0;
+        xDisplacementEl.textContent = 0;
+        yAccelerationEl.textContent = 9.81;
+
+        velocity.value = 0;
+        angle.value = 0;
+
+        drawNewBall();
+      });
+    </script>
+  </body>
+</html>
